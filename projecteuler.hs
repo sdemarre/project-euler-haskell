@@ -33,4 +33,13 @@ divisor_list n start list
 problem_3_n n = head $ divisors n
 problem_3 = problem_3_n 600851475143
 
+isStringPalindrome :: [Char] -> Bool
+isStringPalindrome xs = isStringPalindrome_list xs ((length xs) `div` 2) []
+
+isStringPalindrome_list :: (Integral b) => [Char] -> b -> [Char] -> Bool
+isStringPalindrome_list [] 0 _ = True
+isStringPalindrome_list (x:xs) len allOut@(y:ys)
+  | len == 0 = and [x == y, isStringPalindrome_list xs 0 ys]
+  | otherwise = isStringPalindrome_list xs (len - 1) (x:allOut)
+isStringPalindrome_list _ _ _ = False
 
