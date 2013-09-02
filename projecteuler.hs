@@ -1,3 +1,4 @@
+import qualified Data.Char
 
 problem_1_n n = sum (filter (\x -> or [mod x 3 == 0, mod x 5 == 0]) [1..n])
 problem_1 = problem_1_n 999
@@ -34,12 +35,19 @@ problem_3_n n = head $ divisors n
 problem_3 = problem_3_n 600851475143
 
 isStringPalindrome :: [Char] -> Bool
-isStringPalindrome xs = isStringPalindrome_list xs ((length xs) `div` 2) []
+isStringPalindrome xs = isStringPalindrome_list xs (div (length xs) 2) []
 
 isStringPalindrome_list :: (Integral b) => [Char] -> b -> [Char] -> Bool
 isStringPalindrome_list [] 0 _ = True
-isStringPalindrome_list (x:xs) len allOut@(y:ys)
-  | len == 0 = and [x == y, isStringPalindrome_list xs 0 ys]
-  | otherwise = isStringPalindrome_list xs (len - 1) (x:allOut)
-isStringPalindrome_list _ _ _ = False
+isStringPalindrome_list (x:xs) 0 (y:ys) = and [x == y, isStringPalindrome_list xs 0 ys]
+isStringPalindrome_list (x:xs) len ys = isStringPalindrome_list xs (len - 1) (x:ys)
 
+numberDigits :: (Integral a) => a -> [Char]
+numberDigits n = numberDigits_list n []
+
+numberDigits_list :: (Integral a) => a -> [Char] -> [Char]
+numberDigits_list 0 all@(x:xs) = all
+numberDigits_list 0 [] = ['0']
+numberDigits_list n xs = numberDigits_list nd10 [Data.Char.chr  (Data.Char.ord ('0') + nm10)] ++ xs
+                         where nd10 = (div n 10)
+                               nm10 = (mod n 10)
