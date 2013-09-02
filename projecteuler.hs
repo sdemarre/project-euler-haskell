@@ -21,10 +21,16 @@ isDivisor x y = mod y x == 0
 isPrime :: (Integral a) => a -> Bool
 isPrime x = length (divisors x) == 0
 
+divisors :: (Integral a) => a->[a]
 divisors x = divisor_list x 2 []
 
 divisor_list :: (Integral a) => a -> a -> [a] -> [a]
 divisor_list n start list
-  | (start > (round (sqrt n))) = list
+  | (start*start > n) = n:list
   | (mod n start) == 0 = divisor_list (div n start) 2 [start] ++ list
   | otherwise = divisor_list n (1 + start) list
+
+problem_3_n n = head $ divisors n
+problem_3 = problem_3_n 600851475143
+
+
