@@ -34,20 +34,20 @@ divisor_list n start list
 problem_3_n n = head $ divisors n
 problem_3 = problem_3_n 600851475143
 
-isStringPalindrome :: [Char] -> Bool
-isStringPalindrome xs = isStringPalindrome_list xs (div (length xs) 2) []
+isPalindrome :: (Eq a) => [a] -> Bool
+isPalindrome xs = isPalindrome_list xs (div (length xs) 2) []
 
-isStringPalindrome_list :: (Integral b) => [Char] -> b -> [Char] -> Bool
-isStringPalindrome_list [] 0 _ = True
-isStringPalindrome_list (x:xs) 0 (y:ys) = and [x == y, isStringPalindrome_list xs 0 ys]
-isStringPalindrome_list (x:xs) len ys = isStringPalindrome_list xs (len - 1) (x:ys)
+isPalindrome_list :: (Eq a, Integral b) => [a] -> b -> [a] -> Bool
+isPalindrome_list [] 0 _ = True
+isPalindrome_list (x:xs) 0 (y:ys) = and [x == y, isPalindrome_list xs 0 ys]
+isPalindrome_list (x:xs) len ys = isPalindrome_list xs (len - 1) (x:ys)
 
-numberDigits :: (Integral a) => a -> [Char]
-numberDigits n = numberDigits_list n []
+numberToDigits :: (Integral a) => a -> [a]
+numberToDigits n = numberToDigits_list n []
 
-numberDigits_list :: (Integral a) => a -> [Char] -> [Char]
-numberDigits_list 0 all@(x:xs) = all
-numberDigits_list 0 [] = ['0']
-numberDigits_list n xs = numberDigits_list nd10 [Data.Char.chr  (Data.Char.ord ('0') + nm10)] ++ xs
-                         where nd10 = (div n 10)
-                               nm10 = (mod n 10)
+numberToDigits_list :: (Integral a) => a -> [a] -> [a]
+numberToDigits_list 0 all@(x:xs) = all
+numberToDigits_list 0 [] = [0]
+numberToDigits_list n xs = numberToDigits_list (div n 10) ((mod n 10):xs)
+
+-- problem_4 = filter 
