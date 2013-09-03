@@ -20,18 +20,18 @@ isDivisor :: (Integral a) => a -> a -> Bool
 isDivisor x y = mod y x == 0
 
 isPrime :: (Integral a) => a -> Bool
-isPrime x = length (divisors x) == 0
+isPrime x = length (primeFactors x) == 1
 
-divisors :: (Integral a) => a->[a]
-divisors x = divisor_list x 2 []
+primeFactors :: (Integral a) => a->[a]
+primeFactors x = primeFactors_list x 2 []
 
-divisor_list :: (Integral a) => a -> a -> [a] -> [a]
-divisor_list n start list
+primeFactors_list :: (Integral a) => a -> a -> [a] -> [a]
+primeFactors_list n start list
   | (start*start > n) = n:list
-  | (mod n start) == 0 = divisor_list (div n start) 2 [start] ++ list
-  | otherwise = divisor_list n (1 + start) list
+  | (mod n start) == 0 = primeFactors_list (div n start) 2 [start] ++ list
+  | otherwise = primeFactors_list n (1 + start) list
 
-problem_3_n n = head $ divisors n
+problem_3_n n = head $ primeFactors n
 problem_3 = problem_3_n 600851475143
 
 isPalindrome :: (Eq a) => [a] -> Bool
@@ -64,4 +64,14 @@ concatLists = foldr (++) []
 problem_4 = let candidates = filter isPalindromeNumber $ concatLists (map (\x-> map (*x) [x..999]) [100..999])
             in
              foldr max 0 candidates
+
+problem_5_n n = foldr lcm 1 [1..n]
+problem_5 = problem_5_n 20
+
+problem_6_n :: (Integral a) => a -> a
+problem_6_n n = div ((n-1)*n*(n+1)*(3*n+2)) 12
+problem_6 = problem_6_n 100
+
+problem_7_n n = head $ reverse (take n (filter isPrime [2..]))
+problem_7 = problem_7_n 10001
 
