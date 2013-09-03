@@ -41,13 +41,27 @@ isPalindrome_list :: (Eq a, Integral b) => [a] -> b -> [a] -> Bool
 isPalindrome_list [] 0 _ = True
 isPalindrome_list (x:xs) 0 (y:ys) = and [x == y, isPalindrome_list xs 0 ys]
 isPalindrome_list (x:xs) len ys = isPalindrome_list xs (len - 1) (x:ys)
+isPalindrome_list _ _ _ = False
+
+isPalindromeNumber = isPalindrome . numberToDigits
 
 numberToDigits :: (Integral a) => a -> [a]
 numberToDigits n = numberToDigits_list n []
+
+digitsToNumber :: (Integral a) => [a] -> a
+digitsToNumber xs = digitsToNumber_list 0 xs
+digitsToNumber_list :: (Integral a) => a -> [a] -> a
+digitsToNumber_list n [] = n
+digitsToNumber_list n (x:xs) = digitsToNumber_list (10*n+x) xs
+
 
 numberToDigits_list :: (Integral a) => a -> [a] -> [a]
 numberToDigits_list 0 all@(x:xs) = all
 numberToDigits_list 0 [] = [0]
 numberToDigits_list n xs = numberToDigits_list (div n 10) ((mod n 10):xs)
 
--- problem_4 = filter 
+concatLists = foldr (++) []
+problem_4 = let candidates = filter isPalindromeNumber $ concatLists (map (\x-> map (*x) [x..999]) [100..999])
+            in
+             foldr max 0 candidates
+
