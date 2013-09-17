@@ -1,6 +1,8 @@
 import qualified Data.Numbers.Primes as Primes
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe
+import qualified Debug.Trace
+import Data.Time
 
 problem1N n = sum (filter (\x -> (mod x 3 == 0) || (mod x 5 == 0)) [1..n])
 problem1 = problem1N 999
@@ -271,9 +273,67 @@ incrementalCollatzCount counts n
                 in Map.insert n steps newCounts
 
 problem14N limit = let m = foldl incrementalCollatzCount (Map.fromList [(1,1)]) [1..limit]
-                   in Map.foldlWithKey (\currentBest number collatzLength -> if ((snd currentBest) < collatzLength) then (number, collatzLength) else currentBest) (0,0) m
+                   in Map.foldlWithKey (\currentBest number collatzLength -> if snd currentBest < collatzLength then (number, collatzLength) else currentBest) (0,0) m
 
 problem14 = problem14N 1000000
 
-t = maximum (map collatzLength [1..100000])
-main = print t
+extend15 d = [[elem d i j | i<-[0..length d]] | j<-[0..length d]]
+  where elem d i j
+          | i > 0 && j > 0 = d !! (i-1) !! (j-1)
+          | i == length d || j == length d = 1
+          | otherwise = elem d (i+1) j + elem d i (j+1)
+
+problem15N n = head $ head (p15 [[1]] n)
+  where p15 d 0 = d
+        p15 d n = p15 (extend15 d) (n-1)
+
+problem15 = problem15N 20
+
+data DayOfWeek = Monday | Tuesday | Wednesday | Thursday | Friday | Saturdat | Sunday deriving (Eq, Show, Ord, Bounded, Enum)
+nextDayOfWeek dayOfWeek = if dayOfWeek == (maxBound :: DayOfWeek)
+                          then (minBound :: DayOfWeek)
+                          else succ dayOfWeek
+data Month = January | February | March | April | May | June | July | August | September | October | November | December deriving (Eq, Show, Ord, Bounded, Enum)
+nextMonth month = if month == (maxBound :: Month)
+                  then (minBound :: Month)
+                  else succ month
+monthLength month year
+  | month == February = if Data.Time.isLeapYear year then 29 else 28
+  | month `elem` [April, June, September, November] = 30
+  | otherwise = 31
+data Day = Day Integer Month Integer deriving (Eq, Show, Ord)
+nextDay (Day year month day) = if day == monthLength month year
+                                  then if month == (maxBound :: Month)
+                                       then Day (year + 1) (minBound :: Month) 1
+                                       else Day year (nextMonth month) 1
+                               else Day year month (day + 1)
+
+daysInRangeWhen firstDay startDayOfWeek lastDay whenToCount
+  | firstDay > lastDay = []
+  | whenToCount firstDay startDayOfWeek =  (firstDay, startDayOfWeek):daysInRangeWhen (nextDay firstDay) (nextDayOfWeek startDayOfWeek) lastDay whenToCount
+  | otherwise = daysInRangeWhen (nextDay firstDay) (nextDayOfWeek startDayOfWeek) lastDay whenToCount
+
+problem19 = length $ daysInRangeWhen firstDay firstDayOfWeek lastDay filter
+            where firstDay = Day 1900 January 1
+                  firstDayOfWeek = Monday
+                  lastDay = Day 2000 December 31
+                  filter theDay@(Day year month day) dayOfWeek  =
+                    theDay > Day 1900 December 31 && day == 1 && dayOfWeek == Sunday
+
+problem20N n = sum $ numberToDigits $ product [1..n]
+problem20 = problem20N 100
+
+removeDuplicates xs = Map.keys $ Map.fromList [(x,1)|x<-xs]
+
+divisorList n = removeDuplicates $ map (composeNumber factors) [0..2^length factors - 2]
+                where factors = Primes.primeFactors n
+
+composeNumber [] _ = 1
+composeNumber all@(x:xs) combination
+  | combination `mod` 2 == 0 = composeNumber xs (combination `div` 2)
+  | otherwise = x * composeNumber xs (combination `div` 2)
+
+divisorSum n = sum $ divisorList n
+
+problem21 = sum $ filter (\x->(divisorSum . divisorSum) x == x && not (x == divisorSum x)) [2..10000]
+
