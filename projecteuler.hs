@@ -271,9 +271,64 @@ incrementalCollatzCount counts n
                 in Map.insert n steps newCounts
 
 problem14N limit = let m = foldl incrementalCollatzCount (Map.fromList [(1,1)]) [1..limit]
-                   in Map.foldlWithKey (\currentBest number collatzLength -> if ((snd currentBest) < collatzLength) then (number, collatzLength) else currentBest) (0,0) m
+                   in Map.foldlWithKey (\currentBest number collatzLength -> if snd currentBest < collatzLength
+                                                                             then (number, collatzLength)
+                                                                             else currentBest) (0,0) m
 
 problem14 = problem14N 1000000
 
-t = maximum (map collatzLength [1..100000])
-main = print t
+problem16 = sum $ numberToDigits $ 2^1000
+
+numberName 0 = "zero"
+numberName 1 = "one"
+numberName 2 = "two"
+numberName 3 = "three"
+numberName 4 = "four"
+numberName 5 = "five"
+numberName 6 = "six"
+numberName 7 = "seven"
+numberName 8 = "eight"
+numberName 9 = "nine"
+numberName 10 = "ten"
+numberName 11 = "eleven"
+numberName 12 = "twelve"
+numberName 13 = "thirteen"
+numberName 14 = "fourteen"
+numberName 15 = "fifteen"
+numberName 16 = "sixteen"
+numberName 17 = "seventeen"
+numberName 18 = "eighteen"
+numberName 19 = "nineteen"
+numberName 20 = "twenty"
+numberName 30 = "thirty"
+numberName 40 = "forty"
+numberName 50 = "fifty"
+numberName 60 = "sixty"
+numberName 70 = "seventy"
+numberName 80 = "eighty"
+numberName 90 = "ninety"
+numberName n
+  | n > 1000 = error "can't handle numbers bigger than 1000"
+  | n == 1000 = "one thousand"
+  | n < 100 = numberName ((n `div` 10) * 10) ++ " " ++ numberName (n `mod` 10)
+  | n `mod` 100 == 0 = numberName (n `div` 100) ++ " " ++ "hundred"
+  | n < 1000 = numberName ((n `div` 100) * 100) ++ " and " ++ numberName (n `mod` 100)
+numberNameNoSpaces = (filter (\c->not(c==' '))) . numberName 
+problem17 = sum $ map (length . numberNameNoSpaces) [1..1000]
+
+problem18Data =
+  [[75],
+   [95, 64],
+   [17, 47, 82],
+   [18, 35, 87, 10],
+   [20, 04, 82, 47, 65],
+   [19, 01, 23, 75, 03, 34],
+   [88, 02, 77, 73, 07, 63, 67],
+   [99, 65, 04, 28, 06, 16, 70, 92],
+   [41, 41, 26, 56, 83, 40, 80, 70, 33],
+   [41, 48, 72, 33, 47, 32, 37, 16, 94, 29],
+   [53, 71, 44, 65, 25, 43, 91, 52, 97, 51, 14],
+   [70, 11, 33, 28, 77, 73, 17, 78, 39, 68, 17, 57],
+   [91, 71, 52, 38, 17, 14, 91, 43, 58, 50, 27, 29, 48],
+   [63, 66, 04, 68, 89, 53, 67, 30, 73, 16, 69, 87, 40, 31],
+   [04, 62, 98, 27, 23, 09, 70, 98, 73, 93, 38, 53, 60, 04, 23]]
