@@ -2,6 +2,9 @@ import qualified Data.Numbers.Primes as Primes
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe
 import qualified Debug.Trace
+import qualified Data.Char
+import qualified Data.List
+import qualified Data.Set
 import Data.Time
 
 problem1N n = sum (filter (\x -> (mod x 3 == 0) || (mod x 5 == 0)) [1..n])
@@ -337,3 +340,26 @@ divisorSum n = sum $ divisorList n
 
 problem21 = sum $ filter (\x->(divisorSum . divisorSum) x == x && not (x == divisorSum x)) [2..10000]
 
+
+letterValue c = 1 + Data.Char.ord c - Data.Char.ord 'A'
+wordValue word = sum $ map letterValue word
+problem22WithData p22data = sum $ zipWith (\word pos->wordValue word * pos) (Data.List.sort p22data) [1..]
+
+isAbundandNumber n = n < (sum $ divisorList n)
+problem23 = Data.Set.foldl (+) 0 $ Data.Set.difference (Data.Set.fromList [1..limit - 1]) (Data.Set.fromList sums)
+  where sums = [((anums !! x)+(anums !! y)) |
+                    x<-[0..(length anums) - 1],y<-[x..(length anums) - 1],
+                    ((anums !! x)+(anums !! y)) < limit]
+        limit = 28123
+        anums = filter isAbundandNumber [1..limit - 1]
+
+nthCombination _ [] = []
+nthCombination combidx source = (source !! idx):(nthCombination (combidx `mod` f) $ Data.List.delete (source !! idx) source)
+  where idx = combidx `div` f
+        fact n = product [1..n]
+        f = fact ((length source) - 1)
+problem24 = nthCombination 1000000 [0..9]
+
+numDigits :: (Integral a, Floating a) => a -> a
+numDigits n = (1+floor((log n)/log(10)))
+problem25N digits = Data.List.find (\n->(numDigits n) > digits) $ Data.List.map fib [1..]
