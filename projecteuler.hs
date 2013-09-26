@@ -360,6 +360,54 @@ nthCombination combidx source = (source !! idx):(nthCombination (combidx `mod` f
         f = fact ((length source) - 1)
 problem24 = nthCombination 1000000 [0..9]
 
-numDigits :: (Integral a, Floating a) => a -> a
-numDigits n = (1+floor((log n)/log(10)))
-problem25N digits = Data.List.find (\n->(numDigits n) > digits) $ Data.List.map fib [1..]
+numDigits n = length $ show n
+problem25N n = fibUntilLength_rec n [1,1]
+  where
+    fibUntilLength_rec n fibList@(fn:fnm1:_) = if ((numDigits fn) >= n)
+                                               then length fibList
+                                               else fibUntilLength_rec n ((fn+fnm1):fibList)
+
+problem25 = problem25N 1000
+
+divStep :: (Integral a) => a->a->[a]
+divStep a b = [q,(a-b*q)*10]
+  where q = div a b
+addDivStep dividend divisor divSteps = [newDividend,quotient]:divSteps
+  where [quotient,newDividend] = divStep dividend divisor
+extendDivStepUntilLoop dividend divisor divSteps =
+  let [quotient,newDividend] = divStep dividend divisor
+      newDividendFound = Data.Maybe.isJust $ Data.List.find (\[dividend,quotient]->dividend == newDividend)  divSteps
+  in
+   if newDividendFound
+   then [newDividend,quotient]:divSteps
+   else extendDivStepUntilLoop newDividend divisor ([newDividend,quotient]:divSteps)
+
+unitFractionLoopLength n =
+  let unitFractionData = extendDivStepUntilLoop 1 n []
+  in Data.Maybe.fromJust $ Data.List.findIndex (\ [rem,div] -> rem == head(head(unitFractionData))) $ tail unitFractionData
+
+problem26N n = head $ Data.List.maximumBy loopLengthCompare unitFractionLoopLengths
+  where
+    loopLengthCompare [_, loopLength1] [_, loopLength2] = compare loopLength1 loopLength2
+    unitFractionLoopLengths = Data.List.map idxAndFractionLoopLenght [1..n]
+    idxAndFractionLoopLenght i = [i, unitFractionLoopLength i]
+problem26 = problem26N 1000
+
+
+problem27 = (maximumInfo !! 0)*(maximumInfo !! 1)
+  where
+    maximumInfo = Data.List.maximumBy consecutivePrimeInfoCompare $ consecutivePrimeInfo
+    consecutivePrimeInfoCompare [_,_,l1] [_,_,l2] = compare l1 l2
+    consecutivePrimeInfo = Data.List.map numberConsecutivePrimes [(x,y)|x<-[-1000..1000],y<-[-1000..1000]]
+    numberConsecutivePrimes (a,b) = [a,b,length $ takeWhile Primes.isPrime $ Data.List.map (makePoly a b) [0..]]
+    makePoly a b = (\ n->n*n+a*n+b)
+
+problem28N w = 1 + (div (4*n*(8*n^2+15*n+13)) 6)
+               where n = (w-1) `div` 2
+
+problem29N n = length $ Map.keys  $ Map.fromList $ Data.List.map (\x->(x,1)) [a^b|a<-[2..n],b<-[2..n]]
+problem29 = problem29N 100
+
+problem30 = sum [x|x<-[2..(9^5)*6],x == power5Sum x]
+  where power5Sum x = sum $ map (\ i -> i ^ 5) $ numberToDigits x
+
