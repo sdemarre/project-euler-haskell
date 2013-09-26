@@ -1,6 +1,11 @@
 import qualified Data.Numbers.Primes as Primes
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe
+import qualified Debug.Trace
+import qualified Data.Char
+import qualified Data.List
+import qualified Data.Set
+import Data.Time
 
 problem1N n = sum (filter (\x -> (mod x 3 == 0) || (mod x 5 == 0)) [1..n])
 problem1 = problem1N 999
@@ -277,6 +282,19 @@ problem14N limit = let m = foldl incrementalCollatzCount (Map.fromList [(1,1)]) 
 
 problem14 = problem14N 1000000
 
+extend15 d = [[elem d i j | i<-[0..length d]] | j<-[0..length d]]
+  where elem d i j
+          | i > 0 && j > 0 = d !! (i-1) !! (j-1)
+          | i == length d || j == length d = 1
+          | otherwise = elem d (i+1) j + elem d i (j+1)
+
+problem15N n = head $ head (p15 [[1]] n)
+  where p15 d 0 = d
+        p15 d n = p15 (extend15 d) (n-1)
+
+problem15 = problem15N 20
+
+
 problem16 = sum $ numberToDigits $ 2^1000
 
 numberName 0 = "zero"
@@ -332,3 +350,72 @@ problem18Data =
    [91, 71, 52, 38, 17, 14, 91, 43, 58, 50, 27, 29, 48],
    [63, 66, 04, 68, 89, 53, 67, 30, 73, 16, 69, 87, 40, 31],
    [04, 62, 98, 27, 23, 09, 70, 98, 73, 93, 38, 53, 60, 04, 23]]
+
+
+data DayOfWeek = Monday | Tuesday | Wednesday | Thursday | Friday | Saturdat | Sunday deriving (Eq, Show, Ord, Bounded, Enum)
+nextDayOfWeek dayOfWeek = if dayOfWeek == (maxBound :: DayOfWeek)
+                          then (minBound :: DayOfWeek)
+                          else succ dayOfWeek
+data Month = January | February | March | April | May | June | July | August | September | October | November | December deriving (Eq, Show, Ord, Bounded, Enum)
+nextMonth month = if month == (maxBound :: Month)
+                  then (minBound :: Month)
+                  else succ month
+monthLength month year
+  | month == February = if Data.Time.isLeapYear year then 29 else 28
+  | month `elem` [April, June, September, November] = 30
+  | otherwise = 31
+data Day = Day Integer Month Integer deriving (Eq, Show, Ord)
+nextDay (Day year month day) = if day == monthLength month year
+                                  then if month == (maxBound :: Month)
+                                       then Day (year + 1) (minBound :: Month) 1
+                                       else Day year (nextMonth month) 1
+                               else Day year month (day + 1)
+
+daysInRangeWhen firstDay startDayOfWeek lastDay whenToCount
+  | firstDay > lastDay = []
+  | whenToCount firstDay startDayOfWeek =  (firstDay, startDayOfWeek):daysInRangeWhen (nextDay firstDay) (nextDayOfWeek startDayOfWeek) lastDay whenToCount
+  | otherwise = daysInRangeWhen (nextDay firstDay) (nextDayOfWeek startDayOfWeek) lastDay whenToCount
+
+problem19 = length $ daysInRangeWhen firstDay firstDayOfWeek lastDay filter
+            where firstDay = Day 1900 January 1
+                  firstDayOfWeek = Monday
+                  lastDay = Day 2000 December 31
+                  filter theDay@(Day year month day) dayOfWeek  =
+                    theDay > Day 1900 December 31 && day == 1 && dayOfWeek == Sunday
+
+problem20N n = sum $ numberToDigits $ product [1..n]
+problem20 = problem20N 100
+
+removeDuplicates xs = Map.keys $ Map.fromList [(x,1)|x<-xs]
+
+divisorList n = removeDuplicates $ map (composeNumber factors) [0..2^length factors - 2]
+                where factors = Primes.primeFactors n
+
+composeNumber [] _ = 1
+composeNumber all@(x:xs) combination
+  | combination `mod` 2 == 0 = composeNumber xs (combination `div` 2)
+  | otherwise = x * composeNumber xs (combination `div` 2)
+
+divisorSum n = sum $ divisorList n
+
+problem21 = sum $ filter (\x->(divisorSum . divisorSum) x == x && not (x == divisorSum x)) [2..10000]
+
+
+letterValue c = 1 + Data.Char.ord c - Data.Char.ord 'A'
+wordValue word = sum $ map letterValue word
+problem22WithData p22data = sum $ zipWith (\word pos->wordValue word * pos) (Data.List.sort p22data) [1..]
+
+isAbundandNumber n = n < (sum $ divisorList n)
+problem23 = Data.Set.foldl (+) 0 $ Data.Set.difference (Data.Set.fromList [1..limit - 1]) (Data.Set.fromList sums)
+  where sums = [((anums !! x)+(anums !! y)) |
+                    x<-[0..(length anums) - 1],y<-[x..(length anums) - 1],
+                    ((anums !! x)+(anums !! y)) < limit]
+        limit = 28123
+        anums = filter isAbundandNumber [1..limit - 1]
+
+nthCombination _ [] = []
+nthCombination combidx source = (source !! idx):(nthCombination (combidx `mod` f) $ Data.List.delete (source !! idx) source)
+  where idx = combidx `div` f
+        fact n = product [1..n]
+        f = fact ((length source) - 1)
+problem24 = nthCombination 1000000 [0..9]
