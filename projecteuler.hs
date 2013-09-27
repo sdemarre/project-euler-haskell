@@ -411,3 +411,13 @@ problem29 = problem29N 100
 problem30 = sum [x|x<-[2..(9^5)*6],x == power5Sum x]
   where power5Sum x = sum $ map (\ i -> i ^ 5) $ numberToDigits x
 
+
+-- we assume that possibleSummands is in decreasing order
+countPossibleSums :: (Integral a) => a -> [a] -> a
+countPossibleSums 0 _ = Debug.Trace.trace "0 _ -> 1" 1
+countPossibleSums _ [] = Debug.Trace.trace "_ [] -> 0" 0
+countPossibleSums totalSum possibleSummands@(p:ps) =
+  let result =  if p < totalSum
+                then countPossibleSums totalSum ps
+                else (countPossibleSums (totalSum - p) possibleSummands) + (countPossibleSums totalSum ps)
+      in Debug.Trace.trace (show(totalSum) ++ " " ++ show(possibleSummands) ++ " -> " ++ show(result)) result
