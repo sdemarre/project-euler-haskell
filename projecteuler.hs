@@ -12,12 +12,12 @@ problem1 = problem1N 999
 
 fib :: (Integral a) => a -> a
 fib x = let fib_rec :: (Integral a) => a -> [a] -> a
-            fib_rec _ [] = error "wrong fib_rec call, empty rec"
-            fib_rec _ [_] = error "wrong fib_rec call, single element rec"
             fib_rec 0 (x:y:xs) = y
             fib_rec 1 (x:xs) = x
             fib_rec n all@(x:y:xs) = fib_rec (n - 1) ((x+y) : all)
         in fib_rec x [1,0]
+
+fastFib = 0:1:zipWith (+) fastFib (tail fastFib)
 
 problem2N n = sum (takeWhile (< n) (filter even (map fib [0..])))
 problem2 = problem2N 4000000
@@ -51,14 +51,14 @@ isPalindrome xs = let isPalindrome_rec :: (Eq a, Integral b) => [a] -> b -> [a] 
 isPalindromeNumber = isPalindrome . numberToDigits
 
 numberToDigits :: (Integral a) => a -> [a]
-numberToDigits n = let numberToDigits_rec :: (Integral a) => a -> [a] -> [a]
-                       numberToDigits_rec 0 all@(x:xs) = all
-                       numberToDigits_rec 0 [] = [0]
-                       numberToDigits_rec n xs = numberToDigits_rec (div n 10) (mod n 10 : xs)
-                   in numberToDigits_rec n []
+numberToDigits n = numberToDigits' 10 n
+numberToDigits' b n = let numberToDigits_rec 0 xs = xs
+                          numberToDigits_rec n xs = numberToDigits_rec (div n b) (mod n b : xs)
+                      in numberToDigits_rec n []
 
 digitsToNumber :: (Integral a) => [a] -> a
-digitsToNumber = foldl (\ n x -> 10*n+x) 0
+digitsToNumber = digitsToNumber' 10
+digitsToNumber' b = foldl (\ n x -> b*n+x) 0
 
 problem4 = let candidates = filter isPalindromeNumber $ concatMap (\x-> map (*x) [x..999]) [100..999]
            in maximum candidates
@@ -402,6 +402,7 @@ problem21 = sum $ filter (\x->(divisorSum . divisorSum) x == x && not (x == divi
 
 
 letterValue c = 1 + Data.Char.ord c - Data.Char.ord 'A'
+digitValue c = Data.Char.ord c - Data.Char.ord '0'
 wordValue word = sum $ map letterValue word
 problem22WithData p22data = sum $ zipWith (\word pos->wordValue word * pos) (Data.List.sort p22data) [1..]
 
@@ -485,6 +486,58 @@ problem31 = countPossibleSums 200 [200,100,50,20,10,5,2,1]
 
 allCombinations :: (Eq a) => [a]->[[a]]
 allCombinations [] = [[]]
-allCombinations [x] = [[x]]
-allCombinations xs = foldl (\ c e -> c ++ (allCombinationsMinus e)) [] xs
-  where allCombinationsMinus e = map (\ l->[e] ++ l) (allCombinations $ Data.List.delete e xs)
+-- allCombinations [x] = [[x]]
+-- allCombinations [x1,x2] = [[x1,x2],[x2,x1]]
+allCombinations xs = foldl (\ c e -> c ++ (allCombinationsWithout e)) [] xs
+  where allCombinationsWithout e = map (\ l->[e] ++ l) (allCombinations $ Data.List.delete e xs)
+
+digitFactorialSum n = sum $ map fact $ numberToDigits n
+  where fact n = product [1..n]
+
+allNumberCycles n = map digitsToNumber theCycles
+  where theCycles = let theDigits = numberToDigits n
+                    in [take (length theDigits) $ drop d $ cycle theDigits|d<-[0..length theDigits - 1]]
+
+
+problem35N n = length $ filter (\ cycles-> all Primes.isPrime cycles) $ map allNumberCycles [1..n]
+problem35 = problem35N 1000000
+
+isPalindromeList l = listsEqual l $ reverse l
+  where listsEqual [] [] = True
+        listsEqual [x] [y] = x == y
+        listsEqual (x:xs) (y:ys) = (x == y) && (listsEqual xs ys)
+        listsEqual _ _ = False
+
+problem36N n = sum $ filter (\ n->is2Palindrome n && is10Palindrome n) [1..n]
+               where is2Palindrome n = isPalindromeList $ numberToDigits' 2 n
+                     is10Palindrome n = isPalindromeList $ numberToDigits n
+problem36 = problem36N 1000000
+
+isTruncatablePrime n = leftTruncatable && rightTruncatable
+  where leftTruncatable = all (Primes.isPrime . digitsToNumber) leftTruncations
+          where leftTruncations = init $ Data.List.tails $ numberToDigits n
+        rightTruncatable = all (Primes.isPrime . digitsToNumber) rightTruncations
+          where rightTruncations = tail $ Data.List.inits $ numberToDigits n
+
+problem37 = sum $ take 11 $ filter (\ n -> odd n && isTruncatablePrime n) [11..]
+
+
+problem40 = let str = take 1000000 $ concat [show(x) | x<-[1..]]
+            in product [digitValue(str !! (10^x - 1)) | x<-[0..6]]
+
+generateBinaryPaths 1 = ["L","R"]
+generateBinaryPaths depth = (map (\ p -> "L" ++ p) shorterPaths) ++ (map (\ p -> "R" ++ p) shorterPaths)
+                            where shorterPaths = generateBinaryPaths $ depth - 1
+
+generateLimitedBinaryPaths 1 leftLimit rightLimit currentPosition
+  | currentPosition == leftLimit = ["R"]
+  | currentPosition == rightLimit = ["L"]
+  | otherwise = ["L","R"]
+  
+generateLimitedBinaryPaths depth leftLimit rightLimit currentPosition
+  | currentPosition == leftLimit = map (\ p -> "R" ++ p) shorterPaths
+                                   where shorterPaths = generateLimitedBinaryPaths (depth - 1) leftLimit rightLimit $ currentPosition + 1
+  | currentPosition == rightLimit = map (\ p -> "L" ++ p) shorterPaths
+                                    where shorterPaths = generateLimitedBinaryPaths (depth - 1) leftLimit rightLimit $ currentPosition - 1
+  | otherwise = (map (\ p -> "L" ++ p) shorterPathsLeft) ++ (map (\ p -> "R" ++ p) shorterPathsRight)
+
