@@ -6,18 +6,20 @@ import qualified Data.Char
 import qualified Data.List
 import qualified Data.Set
 import Data.Time
+import Data.Array
+import Data.Ratio
 
 problem1N n = sum (filter (\x -> (mod x 3 == 0) || (mod x 5 == 0)) [1..n])
 problem1 = problem1N 999
 
 fib :: (Integral a) => a -> a
 fib x = let fib_rec :: (Integral a) => a -> [a] -> a
-            fib_rec _ [] = error "wrong fib_rec call, empty rec"
-            fib_rec _ [_] = error "wrong fib_rec call, single element rec"
             fib_rec 0 (x:y:xs) = y
             fib_rec 1 (x:xs) = x
             fib_rec n all@(x:y:xs) = fib_rec (n - 1) ((x+y) : all)
         in fib_rec x [1,0]
+
+fastFib = 0:1:zipWith (+) fastFib (tail fastFib)
 
 problem2N n = sum (takeWhile (< n) (filter even (map fib [0..])))
 problem2 = problem2N 4000000
@@ -51,14 +53,14 @@ isPalindrome xs = let isPalindrome_rec :: (Eq a, Integral b) => [a] -> b -> [a] 
 isPalindromeNumber = isPalindrome . numberToDigits
 
 numberToDigits :: (Integral a) => a -> [a]
-numberToDigits n = let numberToDigits_rec :: (Integral a) => a -> [a] -> [a]
-                       numberToDigits_rec 0 all@(x:xs) = all
-                       numberToDigits_rec 0 [] = [0]
-                       numberToDigits_rec n xs = numberToDigits_rec (div n 10) (mod n 10 : xs)
-                   in numberToDigits_rec n []
+numberToDigits n = numberToDigits' 10 n
+numberToDigits' b n = let numberToDigits_rec 0 xs = xs
+                          numberToDigits_rec n xs = numberToDigits_rec (div n b) (mod n b : xs)
+                      in numberToDigits_rec n []
 
 digitsToNumber :: (Integral a) => [a] -> a
-digitsToNumber = foldl (\ n x -> 10*n+x) 0
+digitsToNumber = digitsToNumber' 10
+digitsToNumber' b = foldl (\ n x -> b*n+x) 0
 
 problem4 = let candidates = filter isPalindromeNumber $ concatMap (\x-> map (*x) [x..999]) [100..999]
            in maximum candidates
@@ -516,6 +518,7 @@ problem21 = sum $ filter (\x->(divisorSum . divisorSum) x == x && not (x == divi
 
 
 letterValue c = 1 + Data.Char.ord c - Data.Char.ord 'A'
+digitValue c = Data.Char.ord c - Data.Char.ord '0'
 wordValue word = sum $ map letterValue word
 problem22WithData p22data = sum $ zipWith (\word pos->wordValue word * pos) (Data.List.sort p22data) [1..]
 
@@ -603,4 +606,68 @@ allCombinations [x] = [[x]]
 allCombinations xs = foldl (\ c e -> c ++ (allCombinationsMinus e)) [] xs
   where allCombinationsMinus e = map (\ l->[e] ++ l) (allCombinations $ Data.List.delete e xs)
 
+digitFactorialSum n = sum $ map fact $ numberToDigits n
+  where fact n = product [1..n]
 
+allNumberCycles n = map digitsToNumber theCycles
+  where theCycles = let theDigits = numberToDigits n
+                    in [take (length theDigits) $ drop d $ cycle theDigits|d<-[0..length theDigits - 1]]
+
+
+problem35N n = length $ filter (\ cycles-> all Primes.isPrime cycles) $ map allNumberCycles [1..n]
+problem35 = problem35N 1000000
+
+isPalindromeList l = listsEqual l $ reverse l
+  where listsEqual [] [] = True
+        listsEqual [x] [y] = x == y
+        listsEqual (x:xs) (y:ys) = (x == y) && (listsEqual xs ys)
+        listsEqual _ _ = False
+
+problem36N n = sum $ filter (\ n->is2Palindrome n && is10Palindrome n) [1..n]
+               where is2Palindrome n = isPalindromeList $ numberToDigits' 2 n
+                     is10Palindrome n = isPalindromeList $ numberToDigits n
+problem36 = problem36N 1000000
+
+isTruncatablePrime n = leftTruncatable && rightTruncatable
+  where leftTruncatable = all (Primes.isPrime . digitsToNumber) leftTruncations
+          where leftTruncations = init $ Data.List.tails $ numberToDigits n
+        rightTruncatable = all (Primes.isPrime . digitsToNumber) rightTruncations
+          where rightTruncations = tail $ Data.List.inits $ numberToDigits n
+
+problem37 = sum $ take 11 $ filter (\ n -> odd n && isTruncatablePrime n) [11..]
+
+
+problem40 = let str = take 1000000 $ concat [show(x) | x<-[1..]]
+            in product [digitValue(str !! (10^x - 1)) | x<-[0..6]]
+
+generateBinaryPaths 1 = ["L","R"]
+generateBinaryPaths depth = (map (\ p -> "L" ++ p) shorterPaths) ++ (map (\ p -> "R" ++ p) shorterPaths)
+                            where shorterPaths = generateBinaryPaths $ depth - 1
+
+generateLimitedBinaryPaths :: (Integral a) => a->a->a->a->[[a]]
+generateLimitedBinaryPaths 1 _ _ currentPosition = [[currentPosition]]
+generateLimitedBinaryPaths depth leftLimit rightLimit currentPosition
+  | currentPosition == leftLimit = map (\ p -> (currentPosition:p)) shorterPathsRight
+  | currentPosition == rightLimit = map (\ p -> (currentPosition:p)) shorterPathsLeft
+  | otherwise = map (\ p -> (currentPosition):p) (shorterPathsLeft ++ shorterPathsRight)
+  where shorterPathsLeft = generateLimitedBinaryPaths (depth - 1) leftLimit rightLimit $ currentPosition - 1
+        shorterPathsRight = generateLimitedBinaryPaths (depth - 1) leftLimit rightLimit $ currentPosition + 1
+
+problem329N heardString boxSize = let primeTab = array (1,boxSize) [(n,Primes.isPrime n)|n<-[1..boxSize]]
+                                      isPrime n = primeTab!n
+                                      heardArray = array (1,length heardString) [(i,(heardString!!(i-1) == 'P'))|i<-[1..length heardString]]
+                                      chanceToHearAt n = (sum [chanceToHearForPath path|path<-(possiblePaths n)]) * (1%fromIntegral((length $ possiblePaths n)))
+                                      possiblePaths n = generateLimitedBinaryPaths (fromIntegral (length heardString)) 1 boxSize n
+                                      chanceToHearForPath :: [Integer]->Ratio Integer
+                                      chanceToHearForPath path = product [(if (primeTab!(path!!(i-1)) == (heardArray!i)) then (2%3) else (1%3)) | i<-[1..length heardString]]
+                                  in  1%boxSize * (sum [chanceToHearAt n|n<-[1..boxSize]])
+toPNString m n = toPNString' n m []
+  where toPNString' _ 0 l = l
+        toPNString' n m l = toPNString' (n `div` 2) (m - 1) ((if (n `mod` 2) == 0 then 'P' else 'N'):l)
+
+allPNStrings length = [toPNString length n | n<-[0..(2^length)-1]]
+                     
+problem329 = problem329N "PPPPNNPPPNPPNPN" 500
+                
+main = do
+  print problem329
