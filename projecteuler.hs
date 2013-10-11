@@ -668,6 +668,10 @@ toPNString m n = toPNString' n m []
 allPNStrings length = [toPNString length n | n<-[0..(2^length)-1]]
                      
 problem329 = problem329N "PPPPNNPPPNPPNPN" 500
-                
+
+problem329Nlisp pathLength boxSize = 
+  let pathProb path = problem329N path boxSize
+  in map (\ p -> p ++ " . " ++ (show(numerator(pathProb p))) ++ "/" ++ show(denominator(pathProb p))) $ allPNStrings pathLength
+
 main = do
   print problem329
