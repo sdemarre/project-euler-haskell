@@ -88,3 +88,46 @@
   (with-open-file (s filename :direction :output :if-exists :supersede)
 	    (format s "~a" (iter (for (key value) in-hashtable h)
 				 (collect (cons key value))))))
+
+(defun p329step (croak current prime-array)
+  (let ((result (make-array (list (length current)))))
+    (flet ((croak-prob (position)
+	     (if (or (and (char= croak #\P) (aref prime-array position))
+		     (and (char= croak #\N) (not (aref prime-array position))))
+		 2/3
+		 1/3)))
+     (iter (for i from 0 to (1- (length current)))
+	   (cond ((= i 0)
+		  (setf (aref result i) (* (croak-prob (1+ i)) (aref current 1))))
+		 ((= i (1- (length current)))
+		  (setf (aref result i) (* (croak-prob (1+ i)) (aref current (1- (length current))))))
+		 (t
+		  (setf (aref result i) (* 1/2 (croak-prob (1+ i)) (+ (aref current (1- i)) (aref current (1+ i)))))))))
+    result))
+
+(defun new-p329 (boxsize heardstring)
+  (let ((prime-array (make-prime-array boxsize))
+	(current (make-array (list boxsize) :initial-element 1)))
+    (iter (for croak in-vector (reverse heardstring))
+	  (setf current (p329step croak current prime-array)))
+    (/ (reduce #'+ current) boxsize)))
+
+(defun to-pn-string (width n)
+  (labels ((to-pn-string-rec (n width l)
+	     (if (zerop width)
+		 l
+		 (to-pn-string-rec (floor n 2) (1- width) (cons (if (zerop (mod n 2)) #\P #\N) l)))))
+    (coerce (to-pn-string-rec n width nil) 'string)))
+
+(defun all-pn-strings (width)
+  (iter (for i from 0 to (1- (expt 2 width)))
+	(collect (to-pn-string width i))))
+
+(defun parallel-experiment (boxsize count pathlength threadcount)
+  (let ((result (make-hash-table :test #'equalp)))
+    (let ((threads (iter (for i from 1 to threadcount)
+			 (collect (sb-thread:make-thread #'(lambda () (experiment-329 boxsize count pathlength)))))))
+      (iter (for h in (mapcar #'sb-thread:join-thread threads))
+	    (iter (for (k v) in-hashtable h)
+		  (incf (gethash k result 0) v)))
+      result)))
