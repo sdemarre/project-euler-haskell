@@ -640,27 +640,22 @@ problem37 = sum $ take 11 $ filter (\ n -> odd n && isTruncatablePrime n) [11..]
 problem40 = let str = take 1000000 $ concat [show(x) | x<-[1..]]
             in product [digitValue(str !! (10^x - 1)) | x<-[0..6]]
 
-generateBinaryPaths 1 = ["L","R"]
-generateBinaryPaths depth = (map (\ p -> "L" ++ p) shorterPaths) ++ (map (\ p -> "R" ++ p) shorterPaths)
-                            where shorterPaths = generateBinaryPaths $ depth - 1
-
-generateLimitedBinaryPaths :: (Integral a) => a->a->a->a->[[a]]
-generateLimitedBinaryPaths 1 _ _ currentPosition = [[currentPosition]]
-generateLimitedBinaryPaths depth leftLimit rightLimit currentPosition
-  | currentPosition == leftLimit = map (\ p -> (currentPosition:p)) shorterPathsRight
-  | currentPosition == rightLimit = map (\ p -> (currentPosition:p)) shorterPathsLeft
-  | otherwise = map (\ p -> (currentPosition):p) (shorterPathsLeft ++ shorterPathsRight)
-  where shorterPathsLeft = generateLimitedBinaryPaths (depth - 1) leftLimit rightLimit $ currentPosition - 1
-        shorterPathsRight = generateLimitedBinaryPaths (depth - 1) leftLimit rightLimit $ currentPosition + 1
-
-problem329N heardString boxSize = let primeTab = array (1,boxSize) [(n,Primes.isPrime n)|n<-[1..boxSize]]
+problem329N heardString boxSize = let primeTab = listArray (1,boxSize) [Primes.isPrime n|n<-[1..boxSize]]
                                       isPrime n = primeTab!n
-                                      heardArray = array (1,length heardString) [(i,(heardString!!(i-1) == 'P'))|i<-[1..length heardString]]
-                                      chanceToHearAt n = (sum [chanceToHearForPath path|path<-(possiblePaths n)]) * (1%fromIntegral((length $ possiblePaths n)))
-                                      possiblePaths n = generateLimitedBinaryPaths (fromIntegral (length heardString)) 1 boxSize n
-                                      chanceToHearForPath :: [Integer]->Ratio Integer
-                                      chanceToHearForPath path = product [(if (primeTab!(path!!(i-1)) == (heardArray!i)) then (2%3) else (1%3)) | i<-[1..length heardString]]
-                                  in  1%boxSize * (sum [chanceToHearAt n|n<-[1..boxSize]])
+                                      isComposite n = not $ isPrime n
+                                      sumArray arr = sum [arr!n|n<-[(fst . bounds) arr.. (snd . bounds) arr]]
+                                      problem329' [] _ probArray = probArray
+                                      problem329' (x:xs) boxSize probArray = problem329' xs boxSize $ newProbArray x
+                                        where newProbArray x = listArray (1,boxSize) [newProb n x|n<-[1..boxSize]]
+                                              croakProb n c
+                                                | ((c == 'P') && (isPrime n)) || ((c == 'N') && (isComposite n)) = 2%3
+                                                | otherwise = 1%3
+                                              newProb n c
+                                                | n == 1 = (croakProb 1 c) * probArray!2
+                                                | n == boxSize = (croakProb boxSize c) * probArray!(boxSize - 1)
+                                                | otherwise = (croakProb n c) * (1%2) * (probArray!(n-1) + probArray!(n+1))
+                                  in  sumArray $ problem329' (reverse heardString) boxSize $ listArray (1,boxSize) [1%boxSize|n<-[1..boxSize]]
+
 toPNString m n = toPNString' n m []
   where toPNString' _ 0 l = l
         toPNString' n m l = toPNString' (n `div` 2) (m - 1) ((if (n `mod` 2) == 0 then 'P' else 'N'):l)
@@ -668,10 +663,6 @@ toPNString m n = toPNString' n m []
 allPNStrings length = [toPNString length n | n<-[0..(2^length)-1]]
                      
 problem329 = problem329N "PPPPNNPPPNPPNPN" 500
-
-problem329Nlisp pathLength boxSize = 
-  let pathProb path = problem329N path boxSize
-  in map (\ p -> p ++ " . " ++ (show(numerator(pathProb p))) ++ "/" ++ show(denominator(pathProb p))) $ allPNStrings pathLength
 
 main = do
   print problem329

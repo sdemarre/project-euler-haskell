@@ -96,13 +96,10 @@
 		     (and (char= croak #\N) (not (aref prime-array position))))
 		 2/3
 		 1/3)))
-     (iter (for i from 0 to (1- (length current)))
-	   (cond ((= i 0)
-		  (setf (aref result i) (* (croak-prob (1+ i)) (aref current 1))))
-		 ((= i (1- (length current)))
-		  (setf (aref result i) (* (croak-prob (1+ i)) (aref current (1- (length current))))))
-		 (t
-		  (setf (aref result i) (* 1/2 (croak-prob (1+ i)) (+ (aref current (1- i)) (aref current (1+ i)))))))))
+      (setf (aref result 0) (* (croak-prob 1) (aref current 1)))
+      (setf (aref result (1- (length current))) (* (croak-prob (length current)) (aref current (- (length current) 2))))
+      (iter (for i from 1 to (- (length current) 2))
+	    (setf (aref result i) (* 1/2 (croak-prob (1+ i)) (+ (aref current (1- i)) (aref current (1+ i)))))))
     result))
 
 (defun new-p329 (boxsize heardstring)
@@ -123,11 +120,42 @@
   (iter (for i from 0 to (1- (expt 2 width)))
 	(collect (to-pn-string width i))))
 
-(defun parallel-experiment (boxsize count pathlength threadcount)
+(defun merge-hashtables (hashtables)
   (let ((result (make-hash-table :test #'equalp)))
-    (let ((threads (iter (for i from 1 to threadcount)
-			 (collect (sb-thread:make-thread #'(lambda () (experiment-329 boxsize count pathlength)))))))
-      (iter (for h in (mapcar #'sb-thread:join-thread threads))
-	    (iter (for (k v) in-hashtable h)
-		  (incf (gethash k result 0) v)))
-      result)))
+    (iter (for h in hashtables)
+	  (iter (for (k v) in-hashtable h)
+		(incf (gethash k result 0) v)))
+    result))
+(defun parallel-experiment (boxsize count pathlength threadcount)
+  (let ((threads (iter (for i from 1 to threadcount)
+		       (collect (sb-thread:make-thread #'(lambda () (experiment-329 boxsize count pathlength)))))))
+    (merge-hashtables (mapcar #'sb-thread:join-thread threads))))
+
+(defun count-events (h)
+  (iter (for (k v) in-hashtable h)
+	(summing v)))
+
+(defun compare-tables (h1 h2)
+  (let ((events1 (count-events h1))
+	(events2 (count-events h2)))
+    (alexandria:alist-hash-table
+     (iter (for (k v) in-hashtable h1)
+	   (collect (cons k (/ (/ (gethash k h1) events1) (/ (gethash k h2) events2) 1.0d0))))
+     :test 'equalp)))
+
+(defun table-max (h)
+  (iter (for (k v) in-hashtable h)
+	(maximize v)))
+
+(defun table-min (h)
+  (iter (for (k v) in-hashtable h)
+	(minimize v)))
+
+(defun exact-329 (boxsize pathlength)
+  (alist-hash-table (iter (for p in (all-pn-strings pathlength))
+			  (collect (cons p (new-p329 boxsize p))))
+		    :test 'equalp))
+
+(defun compare-algorithms (boxsize pathlength exp-count)
+  (let ((compare (compare-tables (exact-329 boxsize pathlength) (experiment-329 boxsize exp-count pathlength))))
+    (cons (table-min compare) (table-max compare))))
